@@ -35,6 +35,14 @@ fn express_mean_square_velocity(particles: &Vec<Particle>) {
     println!("Speeds {:?}", velocity);
 }
 
+fn pull_to_center(particles: &mut Vec<Particle>) {
+    for particle in particles.iter_mut() {
+        particle.vx = -0.1 * particle.x;
+        particle.vy = -0.1 * particle.y;
+        particle.vz = -0.1 * particle.z;
+    }
+}
+
 fn time_step(particles: &mut Vec<Particle>) {
     for particle in particles.iter_mut() {
         particle.x += particle.vx;
@@ -66,11 +74,17 @@ fn main() {
         i = i + 1;
     }
 
-    time_step(&mut particles);
-    time_step(&mut particles);
-    time_step(&mut particles);
-    time_step(&mut particles);
-    time_step(&mut particles);
+    express_mean_square_position(&particles);
+    express_mean_square_velocity(&particles);
+
+    let mut j = 0;
+    while j < 1000 {
+        express_mean_square_position(&particles);
+        express_mean_square_velocity(&particles);
+        pull_to_center(&mut particles);
+        time_step(&mut particles);
+        j = j + 1;
+    }
 
     express_mean_square_position(&particles);
     express_mean_square_velocity(&particles);
