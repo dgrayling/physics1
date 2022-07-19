@@ -1,4 +1,5 @@
- use rand::Rng; 
+use rand::Rng; 
+use std::sync::mpsc;
 
 struct Particle {
     x:f64,vx:f64,
@@ -18,7 +19,13 @@ fn express_mean_square_position(particles: &Vec<Particle>) {
         distances.push(squared.sqrt());
     }
 
-    println!("Position magnitudes {:?}", distances);
+    // println!("Position magnitudes {:?}", distances);
+
+    let sum: f64 = distances.iter().sum();
+    let count = distances.len() as f64;
+
+    println!("Position Average {}", sum/count)
+
 }
 
 fn express_mean_square_velocity(particles: &Vec<Particle>) {
@@ -32,7 +39,12 @@ fn express_mean_square_velocity(particles: &Vec<Particle>) {
         velocity.push(squared.sqrt());
     }
 
-    println!("Speeds {:?}", velocity);
+    // println!("Speeds {:?}", velocity);
+
+    let sum: f64 = velocity.iter().sum();
+    let count = velocity.len() as f64;
+
+    println!("Velocity Average {}", sum/count)
 }
 
 fn pull_to_center(particles: &mut Vec<Particle>) {
@@ -51,6 +63,13 @@ fn time_step(particles: &mut Vec<Particle>) {
     }
 }
 
+fn update_velocities_for_gravity(particles: &mut Vec<Particle>) {
+    let length = particles.len();
+    for (i, particle) in particles.iter_mut().enumerate() {
+        
+    }
+}
+
 //particles have a mailbox
 //all the other particles send their mass and position to the mailbox
 //particle calculates its new position and velocity
@@ -59,9 +78,8 @@ fn time_step(particles: &mut Vec<Particle>) {
 fn main() {
     let mut rng = rand::thread_rng();
     let mut particles: Vec<Particle> = Vec::new();
-    let mut i = 0;
 
-    while i < 10 {
+    for _ in 0..100 {
         particles.push(Particle{
             x: rng.gen_range(-10.0..10.0), 
             y: rng.gen_range(-10.0..10.0), 
@@ -71,21 +89,22 @@ fn main() {
             vz: rng.gen_range(-0.01..0.01),
             mass: 1.0
         });
-        i = i + 1;
     }
+
+    update_velocities_for_gravity(&mut particles);
 
     express_mean_square_position(&particles);
     express_mean_square_velocity(&particles);
 
-    let mut j = 0;
-    while j < 1000 {
-        express_mean_square_position(&particles);
-        express_mean_square_velocity(&particles);
+    for _ in 0..40 {
+        // express_mean_square_position(&particles);
+        // express_mean_square_velocity(&particles);
         pull_to_center(&mut particles);
         time_step(&mut particles);
-        j = j + 1;
     }
 
     express_mean_square_position(&particles);
     express_mean_square_velocity(&particles);
+
+    // need average
 }
