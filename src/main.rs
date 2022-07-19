@@ -1,14 +1,24 @@
 use rand::Rng; 
+use std::thread;
 use std::sync::mpsc;
+use std::sync::mpsc::Sender;
+
+struct MassPosition {
+    x:f64,
+    y:f64,
+    z:f64,
+    mass: f64
+}
 
 struct Particle {
     x:f64,vx:f64,
     y:f64,vy:f64,
     z:f64,vz:f64,
-    mass: f64
+    mass: f64,
+    massPositionReceiver: std::sync::mpsc::Receiver<MassPosition>,
 }
 
-fn express_mean_square_position(particles: &Vec<Particle>) {
+fn express_mean_square_position(particles: &Vec<Box<Particle>>) {
     let mut distances: Vec<f64> = Vec::new();
 
     for particle in particles.iter() {
@@ -28,7 +38,7 @@ fn express_mean_square_position(particles: &Vec<Particle>) {
 
 }
 
-fn express_mean_square_velocity(particles: &Vec<Particle>) {
+fn express_mean_square_velocity(particles: &Vec<Box<Particle>>) {
     let mut velocity: Vec<f64> = Vec::new();
 
     for particle in particles.iter() {
@@ -47,7 +57,7 @@ fn express_mean_square_velocity(particles: &Vec<Particle>) {
     println!("Velocity Average {}", sum/count)
 }
 
-fn pull_to_center(particles: &mut Vec<Particle>) {
+fn pull_to_center(particles: &mut Vec<Box<Particle>>) {
     for particle in particles.iter_mut() {
         particle.vx = -0.1 * particle.x;
         particle.vy = -0.1 * particle.y;
@@ -55,7 +65,7 @@ fn pull_to_center(particles: &mut Vec<Particle>) {
     }
 }
 
-fn time_step(particles: &mut Vec<Particle>) {
+fn time_step(particles: &mut Vec<Box<Particle>>) {
     for particle in particles.iter_mut() {
         particle.x += particle.vx;
         particle.y += particle.vy;
@@ -63,11 +73,30 @@ fn time_step(particles: &mut Vec<Particle>) {
     }
 }
 
-fn update_velocities_for_gravity(particles: &mut Vec<Particle>) {
+fn update_velocities_for_gravity(particles: &mut Vec<Box<Particle>>) {
     let length = particles.len();
     for (i, particle) in particles.iter_mut().enumerate() {
         
     }
+}
+
+fn get_particle_and_mass_position_sender(rng : &mut rand::prelude::ThreadRng) -> (Sender<MassPosition>,std::boxed::Box<Particle>) {
+    let (tx, rx) = mpsc::channel::<MassPosition>();
+
+    let thing = Particle {
+        x: rng.gen_range(-10.0..10.0), 
+        y: rng.gen_range(-10.0..10.0), 
+        z: rng.gen_range(-10.0..10.0),
+        vx: rng.gen_range(-0.01..0.01), 
+        vy: rng.gen_range(-0.01..0.01), 
+        vz: rng.gen_range(-0.01..0.01),
+        mass: 1.0,
+        massPositionReceiver: rx,
+    };
+
+    let boxedThing = Box::new(thing);
+
+    return (tx,boxedThing);
 }
 
 //particles have a mailbox
@@ -76,22 +105,20 @@ fn update_velocities_for_gravity(particles: &mut Vec<Particle>) {
 //particle posts to central controller mailbox, iterate
 
 fn main() {
-    let mut rng = rand::thread_rng();
-    let mut particles: Vec<Particle> = Vec::new();
+    let mut rng = &mut rand::thread_rng();
+    let mut particles: Vec<Box<Particle>> = Vec::new();
+
+    let mut massPositionSenderVector: Vec<std::sync::mpsc::Sender<MassPosition>> = Vec::new();
+    
+
 
     for _ in 0..100 {
-        particles.push(Particle{
-            x: rng.gen_range(-10.0..10.0), 
-            y: rng.gen_range(-10.0..10.0), 
-            z: rng.gen_range(-10.0..10.0),
-            vx: rng.gen_range(-0.01..0.01), 
-            vy: rng.gen_range(-0.01..0.01), 
-            vz: rng.gen_range(-0.01..0.01),
-            mass: 1.0
-        });
+        let (sender, particle) = get_particle_and_mass_position_sender(rng);
+        massPositionSenderVector.push(sender);
+        particles.push(particle);
     }
 
-    update_velocities_for_gravity(&mut particles);
+    // update_velocities_for_gravity(&mut particles);
 
     express_mean_square_position(&particles);
     express_mean_square_velocity(&particles);
